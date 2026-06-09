@@ -103,7 +103,10 @@ class _BackgroundOverlayManagerState extends State<BackgroundOverlayManager> wit
   }
 
   void _scheduleNextOverlay() {
-    _openTimer = Timer(const Duration(seconds: 10), () async {
+    final now = DateTime.now();
+    final toHour = DateTime(now.year, now.month, now.day, now.hour +1);
+    final durationToWait = toHour.difference(now);
+    _openTimer = Timer(durationToWait, () async {
       _updateTime();
 
       if (mounted) {
