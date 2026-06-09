@@ -14,27 +14,10 @@ bool FlutterWindow::OnCreate() {
     return false;
   }
 
-  // Получаем хэндл нативного окна Windows
-  HWND hwnd = GetHandle();
-
-  // Полностью удаляем заголовок (WS_CAPTION) и изменяемую рамку (WS_THICKFRAME)
-  LONG style = ::GetWindowLong(hwnd, GWL_STYLE);
-  style &= ~(WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU);
-  style |= WS_POPUP; // Делаем окно всплывающим (без каких-либо элементов декора)
-  ::SetWindowLong(hwnd, GWL_STYLE, style);
-
-  // Убираем внутренние границы и тени у нативного окна
-  LONG exStyle = ::GetWindowLong(hwnd, GWL_EXSTYLE);
-  exStyle &= ~(WS_EX_DLGMODALFRAME | WS_EX_CLIENTEDGE | WS_EX_STATICEDGE);
-  ::SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
-
-  // Принудительно обновляем стили окна в ОС
-  ::SetWindowPos(hwnd, nullptr, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-
   RECT frame = GetClientArea();
 
-  // The size here must match the window dimensions to avoid unwanted artifacts
-  // during initial resize.
+  // The size here must match the window dimensions to avoid unnecessary surface
+  // creation / destruction in the startup path.
   flutter_controller_ = std::make_unique<flutter::FlutterViewController>(
       frame.right - frame.left, frame.bottom - frame.top, project_);
   // Ensure that basic setup of the controller was successful.
@@ -43,6 +26,15 @@ bool FlutterWindow::OnCreate() {
   }
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
+
+  flutter_controller_->engine()->SetNextFrameCallback([&]() {
+    this->Show();
+  });
+
+  // Flutter can complete the first frame before the "show window" callback is
+  // registered. The following call ensures a frame is pending to ensure the
+  // window is shown. It is a no-op if the first frame hasn't completed yet.
+  flutter_controller_->ForceRedraw();
 
   return true;
 }
@@ -53,4 +45,27 @@ void FlutterWindow::OnDestroy() {
   }
 
   Win32Window::OnDestroy();
+}
+
+LRESULT
+FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
+                              WPARAM const wparam,
+                              LPARAM const lparam) noexcept {
+  // Give Flutter, including plugins, an opportunity to handle window messages.
+  if (flutter_controller_) {
+    std::optional<LRESULT> result =
+        flutter_controller_->HandleTopLevelWindowProc(hwnd, message, wparam,
+                                                      lparam);
+    if (result) {
+      return *result;
+    }
+  }
+
+  switch (message) {
+    case WM_FONTCHANGE:
+      flutter_controller_->engine()->ReloadSystemFonts();
+      break;
+  }
+
+  return Win32Window::MessageHandler(hwnd, message, wparam, lparam);
 }

@@ -2,6 +2,12 @@
 cmake_minimum_required(VERSION 3.14)
 project(push_arlechino LANGUAGES CXX)
 
+# --- ДОБАВЛЕННЫЙ БЛОК ДЛЯ ИСПРАВЛЕНИЯ ОШИБКИ MSVC ---
+if(MSVC)
+  add_compile_definitions(_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
+endif()
+# ----------------------------------------------------
+
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
 set(BINARY_NAME "push_arlechino")
@@ -31,9 +37,6 @@ set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS_RELEASE}")
 
 # Use Unicode for all projects.
 add_definitions(-DUNICODE -D_UNICODE)
-
-# Отключение ошибки устаревших корутин для плагинов (audioplayers)
-add_compile_definitions(_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS)
 
 # Compilation settings that should be applied to most targets.
 #

@@ -26,13 +26,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   FlutterWindow window(project);
   Win32Window::Point origin(10, 10);
-  Win32Window::Size size(200, 80);
+  Win32Window::Size size(1280, 720);
   if (!window.Create(L"push_arlechino", origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);
-
-  ::ShowWindow(window.GetHandle(), SW_HIDE);
 
   ::MSG msg;
   while (::GetMessage(&msg, nullptr, 0, 0)) {
